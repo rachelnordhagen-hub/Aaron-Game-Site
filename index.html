@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Night — Board Game Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #1c2333;
+  --border: #30363d;
+  --accent: #f0b429;
+  --accent2: #e63946;
+  --teal: #4ecdc4;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --card-bg: #161b22;
+  --tag-bg: #1c2333;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Noise texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.3;
+}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+header {
+  position: relative;
+  padding: 60px 40px 40px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+header::after {
+  content: '🎲';
+  position: absolute;
+  right: -20px;
+  top: -20px;
+  font-size: 200px;
+  opacity: 0.04;
+  pointer-events: none;
+  transform: rotate(15deg);
+}
+
+.header-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.site-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 8vw, 96px);
+  line-height: 0.9;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+.site-title span {
+  color: var(--accent);
+  display: block;
+}
+
+.header-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 12px;
+}
+
+.game-count-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+.game-count-badge strong {
+  color: var(--accent);
+  font-size: 22px;
+  display: block;
+  line-height: 1;
+}
+
+/* ── CONTROLS ────────────────────────────────────────────── */
+.controls {
+  padding: 24px 40px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+}
+.search-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+}
+input[type="text"] {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px 10px 38px;
+  outline: none;
+  transition: border-color .2s;
+}
+input[type="text"]:focus { border-color: var(--accent); }
+input[type="text"]::placeholder { color: var(--text-dim); }
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+}
+
+.pill {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 5px 14px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.pill:hover { border-color: var(--accent); color: var(--accent); }
+.pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 9px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+select:focus { border-color: var(--accent); }
+
+.btn {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  padding: 9px 18px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-add {
+  background: var(--accent);
+  color: var(--bg);
+}
+.btn-add:hover { background: #f7c948; transform: translateY(-1px); }
+.btn-danger {
+  background: transparent;
+  border: 1px solid #5a2020;
+  color: #c06060;
+}
+.btn-danger:hover { background: #5a202020; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+/* ── GAME GRID ───────────────────────────────────────────── */
+main { padding: 32px 40px; }
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+.results-count {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.game-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+  cursor: pointer;
+  position: relative;
+}
+.game-card:hover {
+  transform: translateY(-4px);
+  border-color: #30363d;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(240,180,41,0.15);
+}
+
+.game-image {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+  background: var(--bg3);
+}
+.game-image-placeholder {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: linear-gradient(135deg, var(--bg3), var(--bg2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+}
+
+.card-body { padding: 16px; }
+
+.card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.card-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tag {
+  background: var(--tag-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  color: var(--text-muted);
+}
+.tag.players {
+  background: rgba(78,205,196,0.1);
+  border-color: rgba(78,205,196,0.3);
+  color: var(--teal);
+}
+.tag.time {
+  background: rgba(240,180,41,0.08);
+  border-color: rgba(240,180,41,0.25);
+  color: var(--accent);
+}
+.tag.type {
+  background: rgba(230,57,70,0.08);
+  border-color: rgba(230,57,70,0.25);
+  color: var(--accent2);
+}
+
+.card-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vote-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.vote-count.has-votes { color: var(--accent2); }
+
+.vote-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  transition: all .15s;
+}
+.vote-btn:hover {
+  background: rgba(230,57,70,0.15);
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+.vote-btn.voted {
+  background: rgba(230,57,70,0.2);
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+/* admin edit badge */
+.admin-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: flex;
+  gap: 6px;
+}
+.admin-badge button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-dim);
+}
+.empty-state .emoji { font-size: 64px; display: block; margin-bottom: 16px; }
+.empty-state h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.empty-state p { font-size: 14px; line-height: 1.6; }
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 900;
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 32px;
+  position: relative;
+  animation: slideUp .2s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.modal-close:hover { color: var(--text); border-color: var(--text-muted); }
+
+.modal h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+  padding-right: 40px;
+}
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+  margin-bottom: 6px;
+}
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .2s;
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus { border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* Detail modal */
+.detail-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: block;
+  background: var(--bg3);
+}
+.detail-image-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: linear-gradient(135deg, var(--bg3), var(--bg2));
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72px;
+}
+.detail-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.detail-desc {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.vote-section {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.vote-section h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.vote-section p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.vote-form-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.vote-form-row input {
+  flex: 1;
+}
+.btn-request {
+  background: var(--accent2);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-request:hover { background: #ff4757; transform: translateY(-1px); }
+.btn-request:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.vote-list { margin-top: 16px; }
+.vote-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.vote-item:last-child { border-bottom: none; }
+.vote-item .dot {
+  width: 6px; height: 6px;
+  background: var(--accent2);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── ADMIN LOGIN ─────────────────────────────────────────── */
+.admin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 40px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.admin-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.admin-indicator {
+  width: 8px; height: 8px;
+  background: var(--teal);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--teal);
+}
+
+/* ── TOAST ───────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--text);
+  z-index: 9999;
+  transform: translateY(20px);
+  opacity: 0;
+  transition: all .3s;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--teal); }
+.toast.error { border-color: var(--accent2); }
+
+/* ── FOOTER ──────────────────────────────────────────────── */
+footer {
+  margin-top: 80px;
+  padding: 24px 40px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 600px) {
+  header, .controls, main { padding-left: 20px; padding-right: 20px; }
+  .admin-bar { padding-left: 20px; padding-right: 20px; }
+  .game-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .controls { gap: 8px; }
+  .filter-label { display: none; }
+}
+@media (max-width: 400px) {
+  .game-grid { grid-template-columns: 1fr; }
+}
+
+/* loading skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Admin bar -->
+<div class="admin-bar" id="adminBar">
+  <div class="admin-info" id="adminInfo" style="display:none">
+    <div class="admin-indicator"></div>
+    <span>Admin mode</span>
+    <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="adminLogout()">Sign out</button>
+  </div>
+  <button class="btn btn-ghost" style="padding:5px 12px;font-size:11px" id="adminLoginBtn" onclick="openAdminLogin()">Admin</button>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-top">
+    <div>
+      <div class="site-title">Game<span>Night</span></div>
+      <div class="header-sub">Board Game Library • Request a Game</div>
+    </div>
+    <div class="game-count-badge">
+      <strong id="totalCount">—</strong>
+      games in the collection
+    </div>
+  </div>
+</header>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="Search games…" oninput="applyFilters()">
+  </div>
+
+  <span class="filter-label">Players:</span>
+  <div class="filter-group" id="playerFilters">
+    <button class="pill active" data-players="all" onclick="setPlayerFilter(this)">All</button>
+    <button class="pill" data-players="1" onclick="setPlayerFilter(this)">Solo</button>
+    <button class="pill" data-players="2" onclick="setPlayerFilter(this)">2</button>
+    <button class="pill" data-players="3" onclick="setPlayerFilter(this)">3</button>
+    <button class="pill" data-players="4" onclick="setPlayerFilter(this)">4</button>
+    <button class="pill" data-players="5" onclick="setPlayerFilter(this)">5+</button>
+  </div>
+
+  <select id="sortSelect" onchange="applyFilters()">
+    <option value="name">Name A–Z</option>
+    <option value="votes">Most Requested</option>
+    <option value="players">Player Count</option>
+    <option value="time">Play Time</option>
+  </select>
+
+  <button class="btn btn-add" id="addGameBtn" style="display:none" onclick="openAddModal()">+ Add Game</button>
+</div>
+
+<!-- Main grid -->
+<main>
+  <div class="section-header">
+    <div class="section-title">The Collection</div>
+    <div class="results-count" id="resultsCount"></div>
+  </div>
+  <div class="game-grid" id="gameGrid">
+    <div style="color:var(--text-dim);font-size:14px;grid-column:1/-1;padding:40px 0;text-align:center">Loading games…</div>
+  </div>
+</main>
+
+<footer>Game Night Collection — updated weekly</footer>
+
+<!-- ADD/EDIT MODAL -->
+<div class="overlay" id="addOverlay" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddModal()">×</button>
+    <h2 id="addModalTitle">Add Game</h2>
+    <input type="hidden" id="editingId">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Game Title *</label>
+        <input type="text" id="f_title" placeholder="Catan">
+      </div>
+      <div class="form-group">
+        <label>Category / Type</label>
+        <input type="text" id="f_type" placeholder="Strategy, Party…">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="f_desc" placeholder="Short description of the game…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Min Players *</label>
+        <input type="number" id="f_min_players" min="1" max="20" placeholder="2">
+      </div>
+      <div class="form-group">
+        <label>Max Players *</label>
+        <input type="number" id="f_max_players" min="1" max="20" placeholder="6">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Play Time (mins)</label>
+        <input type="number" id="f_time" placeholder="60">
+      </div>
+      <div class="form-group">
+        <label>Difficulty</label>
+        <select id="f_difficulty">
+          <option value="">— select —</option>
+          <option value="Light">Light</option>
+          <option value="Medium">Medium</option>
+          <option value="Heavy">Heavy</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Image URL</label>
+      <input type="text" id="f_image" placeholder="https://…">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-add" onclick="saveGame()">Save Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL / VOTE MODAL -->
+<div class="overlay" id="detailOverlay" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetailModal()">×</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="loginOverlay" onclick="if(event.target===this)closeLoginModal()">
+  <div class="modal" style="max-width:360px">
+    <button class="modal-close" onclick="closeLoginModal()">×</button>
+    <h2>Admin Login</h2>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="adminPwd" placeholder="Enter password" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeLoginModal()">Cancel</button>
+      <button class="btn btn-add" onclick="doAdminLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG — Replace these with your actual Supabase values
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const ADMIN_PASSWORD = 'YOUR_ADMIN_PASSWORD'; // Change this!
+
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let allGames = [];
+let activePlayerFilter = 'all';
+let isAdmin = false;
+let currentDetailId = null;
+
+// ════════════════════════════════════════════════════════
+// SUPABASE HELPERS
+// ════════════════════════════════════════════════════════
+async function supaFetch(path, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || '',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ════════════════════════════════════════════════════════
+// LOAD GAMES
+// ════════════════════════════════════════════════════════
+async function loadGames() {
+  try {
+    const data = await supaFetch('games?select=*,play_requests(id,name)&order=title.asc');
+    allGames = data || [];
+    document.getElementById('totalCount').textContent = allGames.length;
+    applyFilters();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('gameGrid').innerHTML = `
+      <div style="color:var(--accent2);font-size:14px;grid-column:1/-1;padding:40px 0;text-align:center">
+        Could not load games. Check your Supabase config.
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// FILTER + SORT
+// ════════════════════════════════════════════════════════
+function setPlayerFilter(btn) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  activePlayerFilter = btn.dataset.players;
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const sort = document.getElementById('sortSelect').value;
+
+  let filtered = allGames.filter(g => {
+    const matchSearch = !q || g.title.toLowerCase().includes(q) ||
+      (g.description || '').toLowerCase().includes(q) ||
+      (g.category || '').toLowerCase().includes(q);
+
+    let matchPlayers = true;
+    if (activePlayerFilter !== 'all') {
+      const n = parseInt(activePlayerFilter);
+      if (n === 1) matchPlayers = g.min_players === 1;
+      else if (n === 5) matchPlayers = g.max_players >= 5;
+      else matchPlayers = g.min_players <= n && g.max_players >= n;
+    }
+    return matchSearch && matchPlayers;
+  });
+
+  filtered.sort((a, b) => {
+    if (sort === 'name') return a.title.localeCompare(b.title);
+    if (sort === 'votes') return (b.play_requests?.length || 0) - (a.play_requests?.length || 0);
+    if (sort === 'players') return a.min_players - b.min_players;
+    if (sort === 'time') return (a.play_time || 999) - (b.play_time || 999);
+    return 0;
+  });
+
+  renderGrid(filtered);
+  document.getElementById('resultsCount').textContent =
+    filtered.length !== allGames.length ? `${filtered.length} of ${allGames.length} shown` : `${allGames.length} games`;
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════
+function renderGrid(games) {
+  const grid = document.getElementById('gameGrid');
+  if (!games.length) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <span class="emoji">🎲</span>
+        <h3>No Games Found</h3>
+        <p>Try a different search or filter.</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = games.map(g => {
+    const votes = g.play_requests?.length || 0;
+    const playerStr = g.min_players === g.max_players
+      ? `${g.min_players}P`
+      : `${g.min_players}–${g.max_players}P`;
+
+    const imgHtml = g.image_url
+      ? `<img class="game-image" src="${escHtml(g.image_url)}" alt="${escHtml(g.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const placeholder = `<div class="game-image-placeholder" ${g.image_url ? 'style="display:none"' : ''}>🎲</div>`;
+
+    return `
+      <div class="game-card" onclick="openDetail('${g.id}')">
+        ${imgHtml}${placeholder}
+        ${isAdmin ? `
+          <div class="admin-badge">
+            <button onclick="event.stopPropagation();openEditModal('${g.id}')" title="Edit">✏️</button>
+            <button onclick="event.stopPropagation();deleteGame('${g.id}')" title="Delete">🗑️</button>
+          </div>` : ''}
+        <div class="card-body">
+          <div class="card-title">${escHtml(g.title)}</div>
+          <div class="card-meta">
+            <span class="tag players">${playerStr}</span>
+            ${g.play_time ? `<span class="tag time">${g.play_time}m</span>` : ''}
+            ${g.category ? `<span class="tag type">${escHtml(g.category)}</span>` : ''}
+            ${g.difficulty ? `<span class="tag">${escHtml(g.difficulty)}</span>` : ''}
+          </div>
+          ${g.description ? `<div class="card-desc">${escHtml(g.description)}</div>` : ''}
+        </div>
+        <div class="card-footer">
+          <div class="vote-count ${votes > 0 ? 'has-votes' : ''}">
+            ${votes > 0 ? `🔥 ${votes} request${votes !== 1 ? 's' : ''}` : ''}
+          </div>
+          <button class="vote-btn" onclick="event.stopPropagation();openDetail('${g.id}')">
+            Play this!
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// DETAIL MODAL
+// ════════════════════════════════════════════════════════
+async function openDetail(id) {
+  currentDetailId = id;
+  const g = allGames.find(x => x.id === id);
+  if (!g) return;
+
+  const votes = g.play_requests || [];
+  const playerStr = g.min_players === g.max_players
+    ? `${g.min_players} players`
+    : `${g.min_players}–${g.max_players} players`;
+
+  const imgHtml = g.image_url
+    ? `<img class="detail-image" src="${escHtml(g.image_url)}" alt="${escHtml(g.title)}">`
+    : `<div class="detail-image-placeholder">🎲</div>`;
+
+  document.getElementById('detailContent').innerHTML = `
+    ${imgHtml}
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;margin-bottom:12px">${escHtml(g.title)}</h2>
+    <div class="detail-tags">
+      <span class="tag players">${playerStr}</span>
+      ${g.play_time ? `<span class="tag time">${g.play_time} minutes</span>` : ''}
+      ${g.category ? `<span class="tag type">${escHtml(g.category)}</span>` : ''}
+      ${g.difficulty ? `<span class="tag">${escHtml(g.difficulty)} weight</span>` : ''}
+    </div>
+    ${g.description ? `<p class="detail-desc">${escHtml(g.description)}</p>` : ''}
+
+    <div class="vote-section">
+      <h3>🎮 Request This Game</h3>
+      <p>Let the host know you'd love to play this at the next game night!</p>
+      <div class="vote-form-row">
+        <input type="text" id="voterName" placeholder="Your name" maxlength="40">
+        <button class="btn-request" id="submitVoteBtn" onclick="submitVote('${g.id}')">Request It</button>
+      </div>
+      ${votes.length > 0 ? `
+        <div class="vote-list">
+          ${votes.map(v => `
+            <div class="vote-item">
+              <div class="dot"></div>
+              ${escHtml(v.name)} wants to play this
+            </div>`).join('')}
+        </div>` : ''}
+    </div>
+  `;
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+async function submitVote(gameId) {
+  const name = document.getElementById('voterName').value.trim();
+  if (!name) { showToast('Please enter your name!', 'error'); return; }
+
+  const btn = document.getElementById('submitVoteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    await supaFetch('play_requests', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ game_id: gameId, name }),
+    });
+    showToast(`Request sent! The host will see that you want to play this. 🎲`, 'success');
+    await loadGames();
+    openDetail(gameId);
+  } catch (e) {
+    showToast('Something went wrong. Try again.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Request It';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ADD / EDIT GAME
+// ════════════════════════════════════════════════════════
+function openAddModal() {
+  document.getElementById('addModalTitle').textContent = 'Add Game';
+  document.getElementById('editingId').value = '';
+  ['f_title','f_type','f_desc','f_image','f_time'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f_min_players').value = '';
+  document.getElementById('f_max_players').value = '';
+  document.getElementById('f_difficulty').value = '';
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const g = allGames.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById('addModalTitle').textContent = 'Edit Game';
+  document.getElementById('editingId').value = id;
+  document.getElementById('f_title').value = g.title || '';
+  document.getElementById('f_type').value = g.category || '';
+  document.getElementById('f_desc').value = g.description || '';
+  document.getElementById('f_image').value = g.image_url || '';
+  document.getElementById('f_min_players').value = g.min_players || '';
+  document.getElementById('f_max_players').value = g.max_players || '';
+  document.getElementById('f_time').value = g.play_time || '';
+  document.getElementById('f_difficulty').value = g.difficulty || '';
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function closeAddModal() {
+  document.getElementById('addOverlay').classList.remove('open');
+}
+
+async function saveGame() {
+  const title = document.getElementById('f_title').value.trim();
+  const minP = parseInt(document.getElementById('f_min_players').value);
+  const maxP = parseInt(document.getElementById('f_max_players').value);
+  if (!title || isNaN(minP) || isNaN(maxP)) {
+    showToast('Title and player counts are required.', 'error');
+    return;
+  }
+
+  const payload = {
+    title,
+    category: document.getElementById('f_type').value.trim() || null,
+    description: document.getElementById('f_desc').value.trim() || null,
+    image_url: document.getElementById('f_image').value.trim() || null,
+    min_players: minP,
+    max_players: maxP,
+    play_time: parseInt(document.getElementById('f_time').value) || null,
+    difficulty: document.getElementById('f_difficulty').value || null,
+  };
+
+  const editId = document.getElementById('editingId').value;
+  try {
+    if (editId) {
+      await supaFetch(`games?id=eq.${editId}`, { method: 'PATCH', prefer: 'return=minimal', body: JSON.stringify(payload) });
+      showToast('Game updated!', 'success');
+    } else {
+      await supaFetch('games', { method: 'POST', prefer: 'return=minimal', body: JSON.stringify(payload) });
+      showToast('Game added!', 'success');
+    }
+    closeAddModal();
+    loadGames();
+  } catch (e) {
+    showToast('Error saving game: ' + e.message, 'error');
+  }
+}
+
+async function deleteGame(id) {
+  if (!confirm('Delete this game? This cannot be undone.')) return;
+  try {
+    await supaFetch(`games?id=eq.${id}`, { method: 'DELETE' });
+    showToast('Game deleted.', 'success');
+    loadGames();
+  } catch (e) {
+    showToast('Error deleting game.', 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ADMIN AUTH
+// ════════════════════════════════════════════════════════
+function openAdminLogin() { document.getElementById('loginOverlay').classList.add('open'); }
+function closeLoginModal() { document.getElementById('loginOverlay').classList.remove('open'); }
+
+function doAdminLogin() {
+  const pwd = document.getElementById('adminPwd').value;
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById('adminInfo').style.display = 'flex';
+    document.getElementById('adminLoginBtn').style.display = 'none';
+    document.getElementById('addGameBtn').style.display = '';
+    closeLoginModal();
+    renderGrid(allGames.filter(() => true));
+    applyFilters();
+    showToast('Welcome back, host! 🎲', 'success');
+  } else {
+    showToast('Wrong password.', 'error');
+  }
+  document.getElementById('adminPwd').value = '';
+}
+
+function adminLogout() {
+  isAdmin = false;
+  document.getElementById('adminInfo').style.display = 'none';
+  document.getElementById('adminLoginBtn').style.display = '';
+  document.getElementById('addGameBtn').style.display = 'none';
+  applyFilters();
+}
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+loadGames();
+</script>
+</body>
+</html>
