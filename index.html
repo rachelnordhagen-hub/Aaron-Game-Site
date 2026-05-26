@@ -802,8 +802,17 @@ footer {
       </div>
     </div>
     <div class="form-group">
-      <label>Image URL</label>
-      <input type="text" id="f_image" placeholder="https://…">
+      <label>Game Box Photo</label>
+      <div id="uploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s" onclick="document.getElementById('f_image_file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleDrop(event)">
+        <div id="uploadPrompt">
+          <div style="font-size:32px;margin-bottom:8px">📷</div>
+          <div style="font-size:13px;color:var(--text-muted)">Tap to take a photo or upload an image</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px">AI will identify the game automatically</div>
+        </div>
+        <img id="imagePreview" style="display:none;max-width:100%;max-height:180px;border-radius:6px;margin:0 auto;display:none">
+      </div>
+      <input type="file" id="f_image_file" accept="image/*" capture="environment" style="display:none" onchange="handleImageSelect(event)">
+      <div id="identifyStatus" style="font-size:12px;color:var(--teal);margin-top:6px;display:none"></div>
     </div>
 
     <div class="modal-actions">
@@ -1073,15 +1082,111 @@ async function submitVote(gameId) {
 }
 
 // ════════════════════════════════════════════════════════
+// IMAGE UPLOAD + AI IDENTIFY
+// ════════════════════════════════════════════════════════
+let currentImageBase64 = null;
+let currentImageBlob = null;
+
+function resetImageUpload() {
+  currentImageBase64 = null;
+  currentImageBlob = null;
+  document.getElementById('imagePreview').style.display = 'none';
+  document.getElementById('uploadPrompt').style.display = 'block';
+  document.getElementById('identifyStatus').style.display = 'none';
+  document.getElementById('f_image_file').value = '';
+  document.getElementById('uploadArea').style.borderColor = 'var(--border)';
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processImageFile(file);
+}
+
+function handleImageSelect(e) {
+  const file = e.target.files[0];
+  if (file) processImageFile(file);
+}
+
+function processImageFile(file) {
+  currentImageBlob = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    currentImageBase64 = dataUrl.split(',')[1];
+
+    const preview = document.getElementById('imagePreview');
+    preview.src = dataUrl;
+    preview.style.display = 'block';
+    document.getElementById('uploadPrompt').style.display = 'none';
+
+    identifyGame(currentImageBase64);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function identifyGame(base64) {
+  const status = document.getElementById('identifyStatus');
+  status.style.display = 'block';
+  status.textContent = '🔍 Identifying game…';
+
+  try {
+    const smallBase64 = await resizeImageBase64(base64, 800, 600, 0.8);
+    const res = await fetch('/api/identify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: smallBase64 }),
+    });
+    const data = await res.json();
+
+    if (data.title) {
+      document.getElementById('f_title').value = data.title || '';
+      document.getElementById('f_type').value = data.category || '';
+      document.getElementById('f_desc').value = data.description || '';
+      if (data.min_players) document.getElementById('f_min_players').value = data.min_players;
+      if (data.max_players) document.getElementById('f_max_players').value = data.max_players;
+      if (data.play_time) document.getElementById('f_time').value = data.play_time;
+      if (data.difficulty) document.getElementById('f_difficulty').value = data.difficulty;
+      status.textContent = '✅ Game identified! Check and edit details as needed.';
+      status.style.color = 'var(--teal)';
+    } else {
+      status.textContent = '⚠️ Couldn\'t identify — fill in the details manually.';
+      status.style.color = 'var(--accent)';
+    }
+  } catch (e) {
+    status.textContent = '⚠️ Identification failed — fill in details manually.';
+    status.style.color = 'var(--accent)';
+  }
+}
+
+function resizeImageBase64(base64, maxWidth, maxHeight, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+      if (h > maxHeight) { w = w * maxHeight / h; h = maxHeight; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
+    };
+    img.src = 'data:image/jpeg;base64,' + base64;
+  });
+}
+
+// ════════════════════════════════════════════════════════
 // ADD / EDIT GAME
 // ════════════════════════════════════════════════════════
 function openAddModal() {
   document.getElementById('addModalTitle').textContent = 'Add Game';
   document.getElementById('editingId').value = '';
-  ['f_title','f_type','f_desc','f_image','f_time'].forEach(id => document.getElementById(id).value = '');
+  ['f_title','f_type','f_desc','f_time'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f_min_players').value = '';
   document.getElementById('f_max_players').value = '';
   document.getElementById('f_difficulty').value = '';
+  resetImageUpload();
   document.getElementById('addOverlay').classList.add('open');
 }
 
@@ -1093,16 +1198,28 @@ function openEditModal(id) {
   document.getElementById('f_title').value = g.title || '';
   document.getElementById('f_type').value = g.category || '';
   document.getElementById('f_desc').value = g.description || '';
-  document.getElementById('f_image').value = g.image_url || '';
   document.getElementById('f_min_players').value = g.min_players || '';
   document.getElementById('f_max_players').value = g.max_players || '';
   document.getElementById('f_time').value = g.play_time || '';
   document.getElementById('f_difficulty').value = g.difficulty || '';
+  resetImageUpload();
+  // Show existing image if present
+  if (g.image_url) {
+    const preview = document.getElementById('imagePreview');
+    preview.src = g.image_url;
+    preview.style.display = 'block';
+    document.getElementById('uploadPrompt').style.display = 'none';
+    const status = document.getElementById('identifyStatus');
+    status.style.display = 'block';
+    status.style.color = 'var(--text-dim)';
+    status.textContent = 'Current image shown. Upload a new one to replace it.';
+  }
   document.getElementById('addOverlay').classList.add('open');
 }
 
 function closeAddModal() {
   document.getElementById('addOverlay').classList.remove('open');
+  resetImageUpload();
 }
 
 async function saveGame() {
@@ -1114,11 +1231,26 @@ async function saveGame() {
     return;
   }
 
+  let imageUrl = null;
+
+  // Store image as base64 data URL directly in the database
+  if (currentImageBase64) {
+    const resized = await resizeImageBase64(currentImageBase64, 800, 600, 0.8);
+    imageUrl = 'data:image/jpeg;base64,' + resized;
+  } else {
+    // Keep existing image on edit
+    const editId = document.getElementById('editingId').value;
+    if (editId) {
+      const existing = allGames.find(x => x.id === editId);
+      imageUrl = existing?.image_url || null;
+    }
+  }
+
   const payload = {
     title,
     category: document.getElementById('f_type').value.trim() || null,
     description: document.getElementById('f_desc').value.trim() || null,
-    image_url: document.getElementById('f_image').value.trim() || null,
+    image_url: imageUrl,
     min_players: minP,
     max_players: maxP,
     play_time: parseInt(document.getElementById('f_time').value) || null,
