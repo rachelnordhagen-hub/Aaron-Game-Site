@@ -397,7 +397,73 @@ main { padding: 32px 40px; }
   line-height: 1;
 }
 
-/* ── TABS ────────────────────────────────────────────────── */
+/* ── COOKING BANNER ──────────────────────────────────────── */
+.cooking-banner {
+  margin: 12px 40px 0;
+  background: linear-gradient(135deg, rgba(78,205,196,0.07), rgba(78,205,196,0.02));
+  border: 1px solid rgba(78,205,196,0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cooking-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.cooking-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+.cooking-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--teal);
+  margin-bottom: 4px;
+}
+.cooking-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cooking-chip {
+  background: rgba(78,205,196,0.1);
+  border: 1px solid rgba(78,205,196,0.25);
+  border-radius: 20px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+}
+.cooking-empty {
+  color: var(--text-dim);
+  font-size: 14px;
+  font-style: italic;
+}
+.cooking-edit-btn {
+  background: transparent;
+  border: 1px solid rgba(78,205,196,0.3);
+  border-radius: 6px;
+  color: var(--teal);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  transition: all .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cooking-edit-btn:hover { background: rgba(78,205,196,0.1); }
+@media (max-width: 600px) {
+  .cooking-banner { margin: 10px 20px 0; }
+}
+
+
 .tab-nav {
   display: flex;
   gap: 0;
@@ -915,6 +981,18 @@ footer {
 </div>
 
 
+<!-- Cooking Banner -->
+<div class="cooking-banner">
+  <div class="cooking-left">
+    <div class="cooking-icon">🍽️</div>
+    <div>
+      <div class="cooking-label">What's Cooking This Week</div>
+      <div id="cookingItems"><span class="cooking-empty">Nothing announced yet — check back soon!</span></div>
+    </div>
+  </div>
+  <button class="cooking-edit-btn" id="cookingEditBtn" style="display:none" onclick="openCookingModal()">✏️ Edit</button>
+</div>
+
 <!-- Tab Nav -->
 <div class="tab-nav" id="tabNav">
   <button class="tab-btn active" id="tabCollection" onclick="switchTab('collection')">🎲 Collection</button>
@@ -978,6 +1056,23 @@ footer {
 </div>
 
 <footer>Adventurer's Guild Collection — updated weekly</footer>
+
+<!-- COOKING MODAL -->
+<div class="overlay" id="cookingOverlay" onclick="if(event.target===this)closeCookingModal()">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeCookingModal()">×</button>
+    <h2>What's Cooking 🍽️</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">List this week's food — one item per line. Each one will show as its own chip on the site.</p>
+    <div class="form-group">
+      <label>This Week's Menu</label>
+      <textarea id="cookingInput" placeholder="Chili&#10;Cornbread&#10;Brownies" rows="5"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCookingModal()">Cancel</button>
+      <button class="btn btn-add" onclick="saveCooking()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- WINNER MODAL -->
 <div class="overlay" id="winnerOverlay" onclick="if(event.target===this)closeWinnerModal()">
@@ -1624,6 +1719,49 @@ async function clearRequests(gameId, gameTitle) {
 }
 
 
+// ════════════════════════════════════════════════════════
+// COOKING BANNER
+// ════════════════════════════════════════════════════════
+async function loadCooking() {
+  try {
+    const data = await supaFetch('site_settings?key=eq.cooking_this_week&select=value');
+    const val = data?.[0]?.value;
+    const el = document.getElementById('cookingItems');
+    if (val) {
+      const items = val.split('\n').map(s => s.trim()).filter(Boolean);
+      el.innerHTML = `<div class="cooking-items">${items.map(i => `<span class="cooking-chip">${escHtml(i)}</span>`).join('')}</div>`;
+    } else {
+      el.innerHTML = '<span class="cooking-empty">Nothing announced yet — check back soon!</span>';
+    }
+  } catch (e) { /* silent */ }
+}
+
+function openCookingModal() {
+  const chips = document.querySelectorAll('.cooking-chip');
+  const current = Array.from(chips).map(c => c.textContent).join('\n');
+  document.getElementById('cookingInput').value = current;
+  document.getElementById('cookingOverlay').classList.add('open');
+}
+
+function closeCookingModal() {
+  document.getElementById('cookingOverlay').classList.remove('open');
+}
+
+async function saveCooking() {
+  const val = document.getElementById('cookingInput').value.trim();
+  try {
+    await supaFetch('site_settings?key=eq.cooking_this_week', { method: 'DELETE', prefer: 'return=minimal' });
+    if (val) {
+      await supaFetch('site_settings', { method: 'POST', prefer: 'return=minimal', body: JSON.stringify({ key: 'cooking_this_week', value: val }) });
+    }
+    closeCookingModal();
+    loadCooking();
+    showToast("Menu updated! 🍽️", 'success');
+  } catch (e) {
+    showToast('Error saving menu.', 'error');
+  }
+}
+
 async function loadWinner() {
   try {
     const data = await supaFetch('site_settings?key=eq.last_winner&select=value');
@@ -1682,6 +1820,7 @@ function doAdminLogin() {
     document.getElementById('adminLoginBtn').style.display = 'none';
     document.getElementById('addGameBtn').style.display = '';
     document.getElementById('winnerEditBtn').style.display = '';
+    document.getElementById('cookingEditBtn').style.display = '';
     document.getElementById('tabRequests').style.display = '';
     loadRequestsBadge();
     closeLoginModal();
@@ -1700,6 +1839,7 @@ function adminLogout() {
   document.getElementById('adminLoginBtn').style.display = '';
   document.getElementById('addGameBtn').style.display = 'none';
   document.getElementById('winnerEditBtn').style.display = 'none';
+  document.getElementById('cookingEditBtn').style.display = 'none';
   document.getElementById('tabRequests').style.display = 'none';
   switchTab('collection');
   applyFilters();
@@ -1730,6 +1870,7 @@ function escHtml(s) {
 // ════════════════════════════════════════════════════════
 loadGames();
 loadWinner();
+loadCooking();
 </script>
 </body>
 </html>
