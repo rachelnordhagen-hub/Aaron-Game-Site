@@ -397,7 +397,145 @@ main { padding: 32px 40px; }
   line-height: 1;
 }
 
-/* ── EMPTY STATE ─────────────────────────────────────────── */
+/* ── TABS ────────────────────────────────────────────────── */
+.tab-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 0 40px;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 14px 20px 11px;
+  text-transform: uppercase;
+  transition: all .15s;
+  position: relative;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+.tab-badge {
+  background: var(--accent2);
+  border-radius: 10px;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  padding: 1px 6px;
+}
+
+/* ── REQUESTS PANEL ──────────────────────────────────────── */
+#requestsPanel { display: none; padding: 32px 40px; }
+.requests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.request-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.request-card-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.request-card-img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg3);
+  flex-shrink: 0;
+}
+.request-card-img-placeholder {
+  width: 48px;
+  height: 48px;
+  background: var(--bg3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.request-card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.request-card-count {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--accent2);
+  margin-top: 2px;
+}
+.request-names {
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.name-chip {
+  background: rgba(230,57,70,0.1);
+  border: 1px solid rgba(230,57,70,0.25);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 3px 10px;
+}
+.request-time {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  padding: 0 16px 10px;
+}
+.clear-request-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  padding: 6px;
+  transition: all .15s;
+}
+.clear-request-btn:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+.requests-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  grid-column: 1/-1;
+}
+.requests-empty .emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+@media (max-width: 600px) {
+  .tab-nav { padding: 0 20px; }
+  #requestsPanel { padding: 20px; }
+}
+
 .empty-state {
   text-align: center;
   padding: 80px 20px;
@@ -777,44 +915,67 @@ footer {
 </div>
 
 
-<div class="controls">
-  <div class="search-wrap">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-    </svg>
-    <input type="text" id="searchInput" placeholder="Search games…" oninput="applyFilters()">
-  </div>
-
-  <span class="filter-label">Players:</span>
-  <div class="filter-group" id="playerFilters">
-    <button class="pill active" data-players="all" onclick="setPlayerFilter(this)">All</button>
-    <button class="pill" data-players="1" onclick="setPlayerFilter(this)">Solo</button>
-    <button class="pill" data-players="2" onclick="setPlayerFilter(this)">2</button>
-    <button class="pill" data-players="3" onclick="setPlayerFilter(this)">3</button>
-    <button class="pill" data-players="4" onclick="setPlayerFilter(this)">4</button>
-    <button class="pill" data-players="5" onclick="setPlayerFilter(this)">5+</button>
-  </div>
-
-  <select id="sortSelect" onchange="applyFilters()">
-    <option value="name">Name A–Z</option>
-    <option value="votes">Most Requested</option>
-    <option value="players">Player Count</option>
-    <option value="time">Play Time</option>
-  </select>
-
-  <button class="btn btn-add" id="addGameBtn" style="display:none" onclick="openAddModal()">+ Add Game</button>
+<!-- Tab Nav -->
+<div class="tab-nav" id="tabNav">
+  <button class="tab-btn active" id="tabCollection" onclick="switchTab('collection')">🎲 Collection</button>
+  <button class="tab-btn" id="tabRequests" onclick="switchTab('requests')" style="display:none">
+    📋 Requests<span class="tab-badge" id="requestsBadge" style="display:none"></span>
+  </button>
 </div>
 
-<!-- Main grid -->
-<main>
+<!-- Collection Panel -->
+<div id="collectionPanel">
+  <!-- Controls -->
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Search games…" oninput="applyFilters()">
+    </div>
+
+    <span class="filter-label">Players:</span>
+    <div class="filter-group" id="playerFilters">
+      <button class="pill active" data-players="all" onclick="setPlayerFilter(this)">All</button>
+      <button class="pill" data-players="1" onclick="setPlayerFilter(this)">Solo</button>
+      <button class="pill" data-players="2" onclick="setPlayerFilter(this)">2</button>
+      <button class="pill" data-players="3" onclick="setPlayerFilter(this)">3</button>
+      <button class="pill" data-players="4" onclick="setPlayerFilter(this)">4</button>
+      <button class="pill" data-players="5" onclick="setPlayerFilter(this)">5+</button>
+    </div>
+
+    <select id="sortSelect" onchange="applyFilters()">
+      <option value="name">Name A–Z</option>
+      <option value="votes">Most Requested</option>
+      <option value="players">Player Count</option>
+      <option value="time">Play Time</option>
+    </select>
+
+    <button class="btn btn-add" id="addGameBtn" style="display:none" onclick="openAddModal()">+ Add Game</button>
+  </div>
+
+  <!-- Main grid -->
+  <main>
+    <div class="section-header">
+      <div class="section-title">The Collection</div>
+      <div class="results-count" id="resultsCount"></div>
+    </div>
+    <div class="game-grid" id="gameGrid">
+      <div style="color:var(--text-dim);font-size:14px;grid-column:1/-1;padding:40px 0;text-align:center">Loading games…</div>
+    </div>
+  </main>
+</div>
+
+<!-- Requests Panel (admin only) -->
+<div id="requestsPanel">
   <div class="section-header">
-    <div class="section-title">The Collection</div>
-    <div class="results-count" id="resultsCount"></div>
+    <div class="section-title">Game Requests</div>
+    <div class="results-count" id="requestsCount"></div>
   </div>
-  <div class="game-grid" id="gameGrid">
-    <div style="color:var(--text-dim);font-size:14px;grid-column:1/-1;padding:40px 0;text-align:center">Loading games…</div>
+  <div class="requests-grid" id="requestsGrid">
+    <div class="requests-empty" style="grid-column:1/-1"><span class="emoji">📋</span>Loading…</div>
   </div>
-</main>
+</div>
 
 <footer>Adventurer's Guild Collection — updated weekly</footer>
 
@@ -1364,9 +1525,105 @@ async function deleteGame(id) {
   }
 }
 
+async function loadRequestsBadge() {
+  try {
+    const data = await supaFetch('play_requests?select=id');
+    const count = data?.length || 0;
+    const badge = document.getElementById('requestsBadge');
+    if (count > 0) { badge.textContent = count; badge.style.display = ''; }
+    else badge.style.display = 'none';
+  } catch (e) { /* silent */ }
+}
+
+
+function switchTab(tab) {
+  document.getElementById('tabCollection').classList.toggle('active', tab === 'collection');
+  document.getElementById('tabRequests').classList.toggle('active', tab === 'requests');
+  document.getElementById('collectionPanel').style.display = tab === 'collection' ? '' : 'none';
+  document.getElementById('requestsPanel').style.display = tab === 'requests' ? '' : 'none';
+  if (tab === 'requests') loadRequests();
+}
+
 // ════════════════════════════════════════════════════════
-// WINNER BANNER
+// REQUESTS PANEL
 // ════════════════════════════════════════════════════════
+async function loadRequests() {
+  const grid = document.getElementById('requestsGrid');
+  grid.innerHTML = '<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">📋</span>Loading…</div>';
+
+  try {
+    const data = await supaFetch('play_requests?select=id,name,created_at,game_id,games(id,title,image_url)&order=created_at.desc');
+
+    // Group by game
+    const byGame = {};
+    (data || []).forEach(r => {
+      const gid = r.game_id;
+      if (!byGame[gid]) byGame[gid] = { game: r.games, requests: [] };
+      byGame[gid].requests.push(r);
+    });
+
+    const entries = Object.values(byGame).sort((a,b) => b.requests.length - a.requests.length);
+    const totalRequests = data?.length || 0;
+
+    document.getElementById('requestsCount').textContent =
+      `${totalRequests} request${totalRequests !== 1 ? 's' : ''} across ${entries.length} game${entries.length !== 1 ? 's' : ''}`;
+
+    // Update badge
+    const badge = document.getElementById('requestsBadge');
+    if (totalRequests > 0) {
+      badge.textContent = totalRequests;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+
+    if (!entries.length) {
+      grid.innerHTML = `<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">🎲</span><p>No requests yet — share the site with the crew!</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = entries.map(({ game, requests }) => {
+      const imgHtml = game?.image_url
+        ? `<img class="request-card-img" src="${escHtml(game.image_url)}" alt="">`
+        : `<div class="request-card-img-placeholder">🎲</div>`;
+
+      const newest = new Date(requests[0].created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="request-card">
+          <div class="request-card-header">
+            ${imgHtml}
+            <div>
+              <div class="request-card-title">${escHtml(game?.title || 'Unknown Game')}</div>
+              <div class="request-card-count">🔥 ${requests.length} request${requests.length !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div class="request-names">
+            ${requests.map(r => `<span class="name-chip">${escHtml(r.name)}</span>`).join('')}
+          </div>
+          <div class="request-time">Most recent: ${newest}</div>
+          <button class="clear-request-btn" onclick="clearRequests('${game?.id}', '${escHtml(game?.title || '')}')">Clear all requests for this game</button>
+        </div>`;
+    }).join('');
+
+  } catch (e) {
+    grid.innerHTML = `<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">⚠️</span><p>Error loading requests.</p></div>`;
+  }
+}
+
+async function clearRequests(gameId, gameTitle) {
+  if (!confirm(`Clear all requests for ${gameTitle}?`)) return;
+  try {
+    await supaFetch(`play_requests?game_id=eq.${gameId}`, { method: 'DELETE' });
+    showToast('Requests cleared!', 'success');
+    loadRequests();
+    loadGames();
+  } catch (e) {
+    showToast('Error clearing requests.', 'error');
+  }
+}
+
+
 async function loadWinner() {
   try {
     const data = await supaFetch('site_settings?key=eq.last_winner&select=value');
@@ -1425,6 +1682,8 @@ function doAdminLogin() {
     document.getElementById('adminLoginBtn').style.display = 'none';
     document.getElementById('addGameBtn').style.display = '';
     document.getElementById('winnerEditBtn').style.display = '';
+    document.getElementById('tabRequests').style.display = '';
+    loadRequestsBadge();
     closeLoginModal();
     renderGrid(allGames.filter(() => true));
     applyFilters();
@@ -1441,6 +1700,8 @@ function adminLogout() {
   document.getElementById('adminLoginBtn').style.display = '';
   document.getElementById('addGameBtn').style.display = 'none';
   document.getElementById('winnerEditBtn').style.display = 'none';
+  document.getElementById('tabRequests').style.display = 'none';
+  switchTab('collection');
   applyFilters();
 }
 
