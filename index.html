@@ -605,7 +605,58 @@ main { padding: 32px 40px; }
   flex-shrink: 0;
 }
 
-/* ── ADMIN LOGIN ─────────────────────────────────────────── */
+/* ── WINNER BANNER ───────────────────────────────────────── */
+.winner-banner {
+  margin: 24px 40px 0;
+  background: linear-gradient(135deg, rgba(240,180,41,0.08), rgba(240,180,41,0.03));
+  border: 1px solid rgba(240,180,41,0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.winner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.winner-trophy { font-size: 28px; line-height: 1; }
+.winner-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 3px;
+}
+.winner-text {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--text);
+  line-height: 1;
+}
+.winner-text.empty { color: var(--text-dim); font-size: 16px; font-family: 'DM Sans', sans-serif; font-style: italic; }
+.winner-edit-btn {
+  background: transparent;
+  border: 1px solid rgba(240,180,41,0.3);
+  border-radius: 6px;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.winner-edit-btn:hover { background: rgba(240,180,41,0.1); }
+@media (max-width: 600px) {
+  .winner-banner { margin: 16px 20px 0; }
+}
+
 .admin-bar {
   display: flex;
   align-items: center;
@@ -713,7 +764,19 @@ footer {
   </div>
 </header>
 
-<!-- Controls -->
+<!-- Winner Banner -->
+<div class="winner-banner" id="winnerBanner">
+  <div class="winner-left">
+    <div class="winner-trophy">🏆</div>
+    <div>
+      <div class="winner-label">Last Week's Winner</div>
+      <div class="winner-text" id="winnerText"><span class="empty">No winner set yet</span></div>
+    </div>
+  </div>
+  <button class="winner-edit-btn" id="winnerEditBtn" style="display:none" onclick="openWinnerModal()">✏️ Edit</button>
+</div>
+
+
 <div class="controls">
   <div class="search-wrap">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -754,6 +817,23 @@ footer {
 </main>
 
 <footer>Adventurer's Guild Collection — updated weekly</footer>
+
+<!-- WINNER MODAL -->
+<div class="overlay" id="winnerOverlay" onclick="if(event.target===this)closeWinnerModal()">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeWinnerModal()">×</button>
+    <h2>Last Week's Winner</h2>
+    <div class="form-group">
+      <label>Winner & Game</label>
+      <input type="text" id="winnerInput" placeholder="e.g. Sarah won Ark Nova!" maxlength="100">
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-top:-8px">Write whatever you like — a name, a game, a funny note.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeWinnerModal()">Cancel</button>
+      <button class="btn btn-add" onclick="saveWinner()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD/EDIT MODAL -->
 <div class="overlay" id="addOverlay" onclick="if(event.target===this)closeAddModal()">
@@ -1285,8 +1365,55 @@ async function deleteGame(id) {
 }
 
 // ════════════════════════════════════════════════════════
-// ADMIN AUTH
+// WINNER BANNER
 // ════════════════════════════════════════════════════════
+async function loadWinner() {
+  try {
+    const data = await supaFetch('site_settings?key=eq.last_winner&select=value');
+    const val = data?.[0]?.value;
+    const el = document.getElementById('winnerText');
+    if (val) {
+      el.innerHTML = escHtml(val);
+      el.classList.remove('empty');
+    } else {
+      el.innerHTML = '<span class="empty">No winner set yet</span>';
+    }
+  } catch (e) { /* silent */ }
+}
+
+function openWinnerModal() {
+  const current = document.getElementById('winnerText').textContent;
+  document.getElementById('winnerInput').value = current === 'No winner set yet' ? '' : current;
+  document.getElementById('winnerOverlay').classList.add('open');
+}
+
+function closeWinnerModal() {
+  document.getElementById('winnerOverlay').classList.remove('open');
+}
+
+async function saveWinner() {
+  const val = document.getElementById('winnerInput').value.trim();
+  try {
+    await supaFetch('site_settings?key=eq.last_winner', {
+      method: 'DELETE',
+      prefer: 'return=minimal',
+    });
+    if (val) {
+      await supaFetch('site_settings', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify({ key: 'last_winner', value: val }),
+      });
+    }
+    closeWinnerModal();
+    loadWinner();
+    showToast('Winner updated! 🏆', 'success');
+  } catch (e) {
+    showToast('Error saving winner.', 'error');
+  }
+}
+
+
 function openAdminLogin() { document.getElementById('loginOverlay').classList.add('open'); }
 function closeLoginModal() { document.getElementById('loginOverlay').classList.remove('open'); }
 
@@ -1297,6 +1424,7 @@ function doAdminLogin() {
     document.getElementById('adminInfo').style.display = 'flex';
     document.getElementById('adminLoginBtn').style.display = 'none';
     document.getElementById('addGameBtn').style.display = '';
+    document.getElementById('winnerEditBtn').style.display = '';
     closeLoginModal();
     renderGrid(allGames.filter(() => true));
     applyFilters();
@@ -1312,6 +1440,7 @@ function adminLogout() {
   document.getElementById('adminInfo').style.display = 'none';
   document.getElementById('adminLoginBtn').style.display = '';
   document.getElementById('addGameBtn').style.display = 'none';
+  document.getElementById('winnerEditBtn').style.display = 'none';
   applyFilters();
 }
 
@@ -1339,6 +1468,7 @@ function escHtml(s) {
 // INIT
 // ════════════════════════════════════════════════════════
 loadGames();
+loadWinner();
 </script>
 </body>
 </html>
