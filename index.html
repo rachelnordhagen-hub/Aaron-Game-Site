@@ -1646,30 +1646,30 @@ async function loadRequests() {
   grid.innerHTML = '<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">📋</span>Loading…</div>';
 
   try {
-    const data = await supaFetch('play_requests?select=id,name,created_at,game_id,games(id,title,image_url)&order=created_at.desc');
+    const [requests, games] = await Promise.all([
+      supaFetch('play_requests?select=id,name,created_at,game_id&order=created_at.desc'),
+      supaFetch('games?select=id,title,image_url'),
+    ]);
+
+    const gameMap = {};
+    (games || []).forEach(g => gameMap[g.id] = g);
 
     // Group by game
     const byGame = {};
-    (data || []).forEach(r => {
-      const gid = r.game_id;
-      if (!byGame[gid]) byGame[gid] = { game: r.games, requests: [] };
-      byGame[gid].requests.push(r);
+    (requests || []).forEach(r => {
+      if (!byGame[r.game_id]) byGame[r.game_id] = { game: gameMap[r.game_id], requests: [] };
+      byGame[r.game_id].requests.push(r);
     });
 
     const entries = Object.values(byGame).sort((a,b) => b.requests.length - a.requests.length);
-    const totalRequests = data?.length || 0;
+    const totalRequests = requests?.length || 0;
 
     document.getElementById('requestsCount').textContent =
       `${totalRequests} request${totalRequests !== 1 ? 's' : ''} across ${entries.length} game${entries.length !== 1 ? 's' : ''}`;
 
-    // Update badge
     const badge = document.getElementById('requestsBadge');
-    if (totalRequests > 0) {
-      badge.textContent = totalRequests;
-      badge.style.display = '';
-    } else {
-      badge.style.display = 'none';
-    }
+    if (totalRequests > 0) { badge.textContent = totalRequests; badge.style.display = ''; }
+    else badge.style.display = 'none';
 
     if (!entries.length) {
       grid.innerHTML = `<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">🎲</span><p>No requests yet — share the site with the crew!</p></div>`;
@@ -1701,7 +1701,7 @@ async function loadRequests() {
     }).join('');
 
   } catch (e) {
-    grid.innerHTML = `<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">⚠️</span><p>Error loading requests.</p></div>`;
+    grid.innerHTML = `<div class="requests-empty" style="grid-column:1/-1"><span class="emoji">⚠️</span><p>Error loading requests: ${e.message}</p></div>`;
   }
 }
 
