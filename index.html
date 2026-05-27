@@ -500,7 +500,7 @@ main { padding: 32px 40px; }
 }
 
 /* ── REQUESTS PANEL ──────────────────────────────────────── */
-#requestsPanel { display: none; padding: 32px 40px; }
+#requestsPanel { }
 .requests-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1044,7 +1044,7 @@ footer {
 </div>
 
 <!-- Requests Panel (admin only) -->
-<div id="requestsPanel">
+<div id="requestsPanel" style="display:none; padding: 32px 40px;">
   <div class="section-header">
     <div class="section-title">Game Requests</div>
     <div class="results-count" id="requestsCount"></div>
